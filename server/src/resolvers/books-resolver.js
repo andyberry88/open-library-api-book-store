@@ -43,7 +43,8 @@ export default async (root, { search } = {}) => {
         publishDate: bookDetails.publish_date,
     }, isNil));
     if (isSearching && !isSearchingByBibkey) {
-        return books.filter((book) => book.title.indexOf(search) !== -1);
+        const searchLowerCase = search.toLowerCase();
+        return books.filter((book) => book.title.toLowerCase().indexOf(searchLowerCase) !== -1);
     }
     return books;
 };

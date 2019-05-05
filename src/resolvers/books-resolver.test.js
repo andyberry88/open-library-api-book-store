@@ -2,14 +2,27 @@
 
 import chai, { expect } from 'chai';
 import sinonChai from 'sinon-chai';
+import { graphql } from 'graphql';
+import { makeExecutableSchema } from 'graphql-tools';
 
 import sinon from 'sinon';
 import axios from 'axios';
+
+import typeDefs from '../schema';
+import resolvers from '../resolvers';
 
 import booksResolver from './books-resolver';
 import booksQueryResult from '../open-library-response.json';
 
 chai.use(sinonChai);
+
+const graphqlQuery = (query) => graphql(
+    makeExecutableSchema({
+        typeDefs,
+        resolvers,
+    }),
+    query,
+);
 
 describe('books resolver', () => {
     const sandbox = sinon.createSandbox();
@@ -41,37 +54,86 @@ describe('books resolver', () => {
         expect(books).to.deep.equal([]);
     });
 
-    it('returns an array of books from the open library API', async () => {
-        axios.get.resolves({
-            data: {
-                id1: {
+    context('using GraphQL queries', () => {
+        it('returns an array of books from the open library API', async () => {
+            axios.get.resolves({
+                data: {
+                    id1: {
+                        title: 'foo',
+                    },
+                    id2: {
+                        title: 'bar',
+                    },
+                },
+            });
+            const books = await graphqlQuery('query { books { ID title } }');
+            expect(books.data.books).to.deep.equal([
+                {
+                    ID: 'id1',
                     title: 'foo',
                 },
-                id2: {
+                {
+                    ID: 'id2',
                     title: 'bar',
                 },
-            },
+            ]);
         });
-        const books = await booksResolver();
-        expect(books).to.deep.equal([
-            {
-                ID: 'id1',
-                title: 'foo',
-            },
-            {
-                ID: 'id2',
-                title: 'bar',
-            },
-        ]);
-    });
 
-    it('returns an array of book objects', async () => {
-        axios.get.resolves({
-            data: { 'OLID:OL24347578M': booksQueryResult['OLID:OL24347578M'] },
+        it('returns an array of book objects', async () => {
+            axios.get.resolves({
+                data: {
+                    'OLID:OL24347578M': booksQueryResult['OLID:OL24347578M'],
+                    'OLID:OL24180216M': booksQueryResult['OLID:OL24180216M'],
+                },
+            });
+            const books = await graphqlQuery('query { books { ID title } }');
+            expect(books.data.books).to.deep.equal([
+                {
+                    ID: 'OLID:OL24347578M',
+                    title: 'The adventures of Oliver Twist',
+                },
+                {
+                    ID: 'OLID:OL24180216M',
+                    title: 'The Odyssey of Homer',
+                },
+            ]);
         });
-        const books = await booksResolver();
-        expect(books).to.deep.equal([
-            {
+
+        it('doesnt throw an error when querying all fields', async () => {
+            axios.get.resolves({
+                data: booksQueryResult,
+            });
+            const graphqlResult = await graphqlQuery(`query {
+                books {
+                    title
+                }
+            }`);
+            expect(graphqlResult).not.to.contain.keys('errors');
+        });
+
+        it('can query all fields for a book', async () => {
+            axios.get.resolves({
+                data: booksQueryResult,
+            });
+            const graphqlResult = await graphqlQuery(`query {
+                books {
+                    ID
+                    title
+                    url
+                    numberOfPages
+                    coverUrl
+                    authors {
+                        name
+                        url
+                    }
+                    publishers {
+                        name
+                    }
+                    publishDate
+                }
+            }`);
+            const { data: { books } } = graphqlResult;
+            expect(books[0]).to.deep.equal({
                 ID: 'OLID:OL24347578M',
                 title: 'The adventures of Oliver Twist',
                 url: 'https://openlibrary.org/books/OL24347578M/The_adventures_of_Oliver_Twist',
@@ -89,7 +151,7 @@ describe('books resolver', () => {
                     },
                 ],
                 publishDate: '1898',
-            },
-        ]);
+            });
+        });
     });
 });

@@ -7,6 +7,7 @@ import sinon from 'sinon';
 import axios from 'axios';
 
 import booksResolver from './books-resolver';
+import booksQueryResult from '../open-library-response.json';
 
 chai.use(sinonChai);
 
@@ -44,22 +45,50 @@ describe('books resolver', () => {
         axios.get.resolves({
             data: {
                 id1: {
-                    foo: 'bar',
+                    title: 'foo',
                 },
                 id2: {
-                    bar: 'baz',
+                    title: 'bar',
                 },
             },
         });
         const books = await booksResolver();
         expect(books).to.deep.equal([
             {
-                id: 'id1',
-                foo: 'bar',
+                ID: 'id1',
+                title: 'foo',
             },
             {
-                id: 'id2',
-                bar: 'baz',
+                ID: 'id2',
+                title: 'bar',
+            },
+        ]);
+    });
+
+    it('returns an array of book objects', async () => {
+        axios.get.resolves({
+            data: { 'OLID:OL24347578M': booksQueryResult['OLID:OL24347578M'] },
+        });
+        const books = await booksResolver();
+        expect(books).to.deep.equal([
+            {
+                ID: 'OLID:OL24347578M',
+                title: 'The adventures of Oliver Twist',
+                url: 'https://openlibrary.org/books/OL24347578M/The_adventures_of_Oliver_Twist',
+                numberOfPages: 509,
+                coverUrl: 'https://covers.openlibrary.org/b/id/7883999-M.jpg',
+                authors: [
+                    {
+                        name: 'Charles Dickens',
+                        url: 'https://openlibrary.org/authors/OL24638A/Charles_Dickens',
+                    },
+                ],
+                publishers: [
+                    {
+                        name: 'Scribner',
+                    },
+                ],
+                publishDate: '1898',
             },
         ]);
     });

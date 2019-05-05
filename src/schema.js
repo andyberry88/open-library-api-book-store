@@ -23,6 +23,6 @@ export default gql`
     }
 
   type Query {
-      books: [Book]
+      books(search: String): [Book]
   }
 `;

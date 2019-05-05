@@ -42,6 +42,7 @@ describe('books resolver', () => {
     it('queries the open library API to get books', () => {
         booksResolver();
         expect(axios.get).to.have.been.calledOnce;
+        expect(axios.get).to.have.been.calledWithExactly('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json');
     });
 
     it('returns a promise when called', () => {
@@ -66,8 +67,8 @@ describe('books resolver', () => {
                     },
                 },
             });
-            const books = await graphqlQuery('query { books { ID title } }');
-            expect(books.data.books).to.deep.equal([
+            const graphqlResult = await graphqlQuery('query { books { ID title } }');
+            expect(graphqlResult.data.books).to.deep.equal([
                 {
                     ID: 'id1',
                     title: 'foo',
@@ -86,8 +87,8 @@ describe('books resolver', () => {
                     'OLID:OL24180216M': booksQueryResult['OLID:OL24180216M'],
                 },
             });
-            const books = await graphqlQuery('query { books { ID title } }');
-            expect(books.data.books).to.deep.equal([
+            const graphqlResult = await graphqlQuery('query { books { ID title } }');
+            expect(graphqlResult.data.books).to.deep.equal([
                 {
                     ID: 'OLID:OL24347578M',
                     title: 'The adventures of Oliver Twist',
@@ -103,11 +104,7 @@ describe('books resolver', () => {
             axios.get.resolves({
                 data: booksQueryResult,
             });
-            const graphqlResult = await graphqlQuery(`query {
-                books {
-                    title
-                }
-            }`);
+            const graphqlResult = await graphqlQuery('query { books { title } }');
             expect(graphqlResult).not.to.contain.keys('errors');
         });
 
@@ -151,6 +148,30 @@ describe('books resolver', () => {
                     },
                 ],
                 publishDate: '1898',
+            });
+        });
+
+        context('providing search argument', () => {
+            it('can search by OLID', async () => {
+                axios.get.withArgs('https://openlibrary.org/api/books?bibkeys=OLID:OL24347578M&jscmd=data&format=json').resolves({
+                    data: { 'OLID:OL24347578M': booksQueryResult['OLID:OL24347578M'] },
+                });
+                const graphqlResult = await graphqlQuery('query { books(search: "OLID:OL24347578M") { ID title } }');
+                expect(graphqlResult.data.books.length).to.equal(1);
+                expect(graphqlResult.data.books[0].ID).to.equal('OLID:OL24347578M');
+                expect(graphqlResult.data.books[0].title).to.equal('The adventures of Oliver Twist');
+                expect(axios.get).to.have.been.calledWithExactly('https://openlibrary.org/api/books?bibkeys=OLID:OL24347578M&jscmd=data&format=json');
+            });
+
+            it('can search by title', async () => {
+                axios.get.withArgs('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json').resolves({
+                    data: booksQueryResult,
+                });
+                const graphqlResult = await graphqlQuery('query { books(search: "The Odyssey of Homer") { ID title } }');
+                expect(graphqlResult.data.books.length).to.equal(1);
+                expect(graphqlResult.data.books[0].ID).to.equal('OLID:OL24180216M');
+                expect(graphqlResult.data.books[0].title).to.equal('The Odyssey of Homer');
+                expect(axios.get).to.have.been.calledWithExactly('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json');
             });
         });
     });

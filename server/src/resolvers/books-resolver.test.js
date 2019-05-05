@@ -173,6 +173,17 @@ describe('books resolver', () => {
                 expect(graphqlResult.data.books[0].title).to.equal('The Odyssey of Homer');
                 expect(axios.get).to.have.been.calledWithExactly('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json');
             });
+
+            it('can search by title prefix', async () => {
+                axios.get.withArgs('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json').resolves({
+                    data: booksQueryResult,
+                });
+                const graphqlResult = await graphqlQuery('query { books(search: "Odyssey") { ID title } }');
+                expect(graphqlResult.data.books.length).to.equal(1);
+                expect(graphqlResult.data.books[0].ID).to.equal('OLID:OL24180216M');
+                expect(graphqlResult.data.books[0].title).to.equal('The Odyssey of Homer');
+                expect(axios.get).to.have.been.calledWithExactly('https://openlibrary.org/api/books?bibkeys=OLID:OL22895148M,OLID:OL6990157M,OLID:OL7101974M,OLID:OL6732939M,OLID:OL7193048M,OLID:OL24347578M,OLID:OL24180216M,OLID:OL24948637M,OLID:OL1631378M,OLID:OL979600M,OLID:OL33674M,OLID:OL7950349M,OLID:OL349749M,OLID:OL30460M,OLID:OL24347578M&jscmd=data&format=json');
+            });
         });
     });
 });
